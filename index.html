@@ -1,0 +1,1086 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Block with care — a proof of concept</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        --bg: #eef1f4;
+        --surface: #ffffff;
+        --surface-2: #f5f7f9;
+        --ink: #0f1b2d;
+        --muted: #55637a;
+        --line: #d6dce4;
+        --accent: #1f5fbf;
+        --accent-ink: #ffffff;
+        --u0: #2b8a78;
+        --u1: #8c9a2b;
+        --u2: #d98a1f;
+        --u3: #d2562b;
+        --u4: #b3202f;
+        --font-display:
+          "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+        --font-body:
+          "Instrument Sans", system-ui, -apple-system, "Segoe UI", Arial,
+          sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #0e1520;
+          --surface: #16202e;
+          --surface-2: #1c2838;
+          --ink: #e8edf4;
+          --muted: #9aa6b8;
+          --line: #28344a;
+          --accent: #5b97f0;
+          --accent-ink: #0b1220;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: #0e1520;
+        --surface: #16202e;
+        --surface-2: #1c2838;
+        --ink: #e8edf4;
+        --muted: #9aa6b8;
+        --line: #28344a;
+        --accent: #5b97f0;
+        --accent-ink: #0b1220;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: inherit;
+      }
+      html {
+        height: 100%;
+        scroll-padding-top: env(safe-area-inset-top, 0px);
+      }
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-body);
+        font-size: 17px;
+        line-height: 1.55;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: var(--font-display);
+        line-height: 1.1;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      a {
+        color: var(--accent);
+      }
+      :focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .layout {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 40px 20px 72px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 390px;
+        gap: 56px;
+        align-items: start;
+      }
+      @media (max-width: 920px) {
+        .layout {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+      }
+
+      /* ---------- Proposal column ---------- */
+      .prose {
+        max-width: 60ch;
+      }
+      .prose h1 {
+        font-size: clamp(2.3rem, 5.4vw, 3.6rem);
+        font-weight: 700;
+      }
+      .lede {
+        font-size: 1.2rem;
+        color: var(--muted);
+        margin: 18px 0 0;
+      }
+      .prose section {
+        margin-top: 44px;
+      }
+      .prose h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      .prose p {
+        margin: 0 0 12px;
+      }
+      .principle {
+        border-left: 6px solid var(--u3);
+        padding: 4px 0 4px 18px;
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.45rem;
+        line-height: 1.25;
+        font-weight: 500;
+      }
+      .tiers {
+        list-style: none;
+        padding: 0;
+        margin: 14px 0 0;
+        display: grid;
+        gap: 8px;
+      }
+      .tiers li {
+        display: grid;
+        grid-template-columns: 14px 1fr;
+        gap: 12px;
+        align-items: start;
+      }
+      .tiers i {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        margin-top: 6px;
+      }
+      .evidence {
+        padding-left: 18px;
+      }
+      .evidence li {
+        margin-bottom: 10px;
+      }
+      .caveat {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px 16px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      /* ---------- Phone ---------- */
+      .stage {
+        position: sticky;
+        top: 20px;
+      }
+      @media (max-width: 920px) {
+        .stage {
+          position: static;
+        }
+      }
+      .mode {
+        display: flex;
+        gap: 6px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px;
+        margin-bottom: 14px;
+      }
+      .mode button {
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-weight: 600;
+        padding: 8px 10px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .mode button[aria-pressed="true"] {
+        background: var(--ink);
+        color: var(--bg);
+      }
+      .phone {
+        position: relative;
+        height: 720px;
+        max-height: 86vh;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 34px;
+        overflow: hidden;
+        box-shadow: 0 18px 50px rgba(15, 27, 45, 0.18);
+      }
+      .profile {
+        padding: 26px 22px;
+      }
+      .avatar {
+        width: 84px;
+        height: 84px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7a8ca8, #3c4e6b);
+      }
+      .profile h3 {
+        font-size: 1.4rem;
+        margin-top: 14px;
+      }
+      .handle {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .btn {
+        font: inherit;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 10px 16px;
+        cursor: pointer;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+      }
+      .btn.danger {
+        background: var(--surface-2);
+        color: var(--u4);
+        border-color: var(--u4);
+      }
+      .post {
+        margin: 22px 0 0;
+        padding: 14px 0 0;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .skeleton {
+        height: 10px;
+        border-radius: 6px;
+        background: var(--line);
+        margin: 10px 0;
+      }
+
+      .scrim {
+        position: absolute;
+        inset: 0;
+        background: rgba(8, 14, 24, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      .scrim.on {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        max-height: 92%;
+        overflow-y: auto;
+        background: var(--surface);
+        border-radius: 26px 26px 0 0;
+        display: grid;
+        grid-template-columns: 8px 1fr;
+        transform: translateY(105%);
+        transition: transform 0.28s ease;
+      }
+      .sheet.on {
+        transform: translateY(0);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .sheet,
+        .scrim {
+          transition: none;
+        }
+      }
+      .rail {
+        background: var(--rail, var(--line));
+        transition: background 0.25s;
+      }
+      .sheet-body {
+        padding: 22px 20px 24px;
+      }
+      .sheet-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .close {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 1.4rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 8px;
+      }
+      .sheet h3 {
+        font-size: 1.45rem;
+        margin: 10px 0 6px;
+        font-weight: 700;
+      }
+      .sheet p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 0.97rem;
+      }
+      .opts {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .opt {
+        text-align: left;
+        font: inherit;
+        color: var(--ink);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 14px;
+        cursor: pointer;
+        display: grid;
+        grid-template-columns: 12px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+      .opt:hover {
+        border-color: var(--ink);
+      }
+      .opt .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--line);
+      }
+      .opt.plain {
+        grid-template-columns: 1fr;
+      }
+      .link {
+        background: none;
+        border: 0;
+        color: var(--accent);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 10px 0 0;
+        text-decoration: underline;
+      }
+      .stack {
+        display: grid;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .signal {
+        background: var(--surface-2);
+        border: 1px dashed var(--line);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 14px;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+      .signal b {
+        color: var(--ink);
+      }
+      .signal dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+        margin: 8px 0 0;
+      }
+      .signal dt {
+        color: var(--muted);
+      }
+      .signal dd {
+        margin: 0;
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .note {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <!-- ===================== PROPOSAL ===================== -->
+      <article class="prose">
+        <h1>One tap. Total exclusion. No questions asked.</h1>
+        <p class="lede">
+          A proof of concept for a block button that asks first, and never slows
+          down the people who need it most.
+        </p>
+
+        <section>
+          <h2>The problem</h2>
+          <p>
+            Blocking is one of the most powerful actions a social network
+            offers: it silently cuts a person off, completely and instantly.
+            Platforms hand it out with a single tap, no context, and no
+            follow-up.
+          </p>
+          <p>
+            The same button protects someone from a stalker and lets someone
+            avoid an awkward conversation. The platform can't tell the two
+            apart, so it learns nothing about either.
+          </p>
+        </section>
+
+        <section>
+          <h2>The principle</h2>
+          <p class="principle">Friction should scale inversely with danger.</p>
+          <p style="margin-top: 14px">
+            Low stakes: slow down, offer gentler tools. High stakes: block
+            immediately, ask questions afterwards. The block button opens a
+            short questionnaire whose questions get more specific as urgency
+            rises, and it ends with a report to the platform when the situation
+            calls for one.
+          </p>
+          <ul class="tiers">
+            <li>
+              <i style="background: var(--u0)"></i
+              ><span
+                ><b>Minor discomfort:</b> suggest mute, restrict or a 30-day
+                snooze. Block stays available.</span
+              >
+            </li>
+            <li>
+              <i style="background: var(--u2)"></i
+              ><span><b>Real conflict:</b> block, with report offered.</span>
+            </li>
+            <li>
+              <i style="background: var(--u3)"></i
+              ><span
+                ><b>Harassment or repeated contact:</b> block and report
+                recommended, pre-filled from the answers.</span
+              >
+            </li>
+            <li>
+              <i style="background: var(--u4)"></i
+              ><span
+                ><b>Safety at risk:</b> instant block, priority report, evidence
+                preserved, support resources. No questions first.</span
+              >
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Whose job is this?</h2>
+          <p>
+            A social network's job is to manage social conflict. If every
+            dispute is handed to a one-tap exclusion button, the platform has
+            outsourced its core function to its users. Social isn't an optional
+            feature of a social network. A platform that doesn't want to handle
+            it properly should stop calling itself one and say what it is: an
+            advertising business with a friends list.
+          </p>
+        </section>
+
+        <section>
+          <h2>What the research suggests</h2>
+          <ul class="evidence">
+            <li>
+              Blocking is experienced very differently on each side. A 2026
+              conference poster (N = 130) reports relief and restored control
+              for people who block, and confusion, rejection and lower need
+              satisfaction for people who are blocked.
+              <a
+                href="https://www.psychologicalscience.org/conventions/archive/2026annual/paper/61996/"
+                target="_blank"
+                rel="noopener"
+                >APS 2026 poster</a
+              >
+            </li>
+            <li>
+              Online ostracism threatens basic needs (belonging, esteem,
+              control, meaning) across age groups, which is why a silent block
+              isn't a neutral act.
+              <a
+                href="https://vulcanpost.com/10169/ignored-facebook-lowers-self-esteem-study-finds/"
+                target="_blank"
+                rel="noopener"
+                >Summary of Abrams and Williams's findings</a
+              >
+            </li>
+            <li>
+              Design "friction" that makes people stop and think has been
+              welcomed by civil-rights groups as a way to reduce harassment
+              without relying on punishment alone.
+              <a
+                href="https://go.adl.org/node/38418"
+                target="_blank"
+                rel="noopener"
+                >ADL statement on Instagram's 2019 changes</a
+              >
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>What this isn't</h2>
+          <p class="caveat">
+            This is a flow prototype, not a validated clinical tool. The
+            wording, the scoring and the thresholds are placeholders to be
+            tested with psychologists, harassment-survivor advocates and trust
+            &amp; safety teams. Its main design constraint: friction must never
+            stand between a person in danger and the block. That is why the "I
+            feel unsafe" answer, on the very first screen, blocks instantly.
+          </p>
+        </section>
+
+        <section>
+          <h2>Open questions</h2>
+          <p>
+            These are deliberately left open. This is a proposal to discuss, not
+            a finished answer.
+          </p>
+          <ul class="evidence">
+            <li>
+              <b>Should the blocked person be told?</b> A neutral notice might
+              reduce confusion and the sense of being silently erased. It might
+              also escalate a dangerous situation, or tip off someone who
+              shouldn't know. The prototype takes no position.
+            </li>
+            <li>
+              <b>Who sees the answers?</b> The questionnaire creates sensitive
+              data. Retention, access and use limits would have to be designed
+              with privacy experts.
+            </li>
+            <li>
+              <b>How should thresholds be set, and by whom?</b> The scoring here
+              is a placeholder. A real one needs evidence, testing across
+              cultures, and an audit trail.
+            </li>
+            <li>
+              <b>Can it be gamed?</b> People could pick whatever answer unlocks
+              the outcome they want. What would make the flow robust without
+              making it punitive?
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <!-- ===================== PHONE ===================== -->
+      <aside class="stage" aria-label="Interactive prototype">
+        <div class="mode" role="group" aria-label="Flow to preview">
+          <button type="button" data-mode="today" aria-pressed="false">
+            Today
+          </button>
+          <button type="button" data-mode="proposed" aria-pressed="true">
+            Proposed
+          </button>
+        </div>
+
+        <div class="phone" id="phone">
+          <div class="profile">
+            <div class="avatar" aria-hidden="true"></div>
+            <h3>Alex River</h3>
+            <div class="handle">@alex_river</div>
+            <div class="actions">
+              <button class="btn primary" type="button" disabled>Follow</button>
+              <button class="btn" type="button" disabled>Message</button>
+              <button class="btn danger" type="button" id="blockBtn">
+                Block
+              </button>
+            </div>
+            <div class="post">
+              <div class="skeleton" style="width: 90%"></div>
+              <div class="skeleton" style="width: 70%"></div>
+              <div class="skeleton" style="width: 80%"></div>
+            </div>
+            <p class="note">Demo profile. Tap <b>Block</b> to try the flow.</p>
+          </div>
+          <div class="scrim" id="scrim"></div>
+          <div
+            class="sheet"
+            id="sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sheetTitle"
+          >
+            <div class="rail" id="rail"></div>
+            <div class="sheet-body" id="sheetBody"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        // ---------- Data ----------
+        var REASONS = [
+          {
+            id: "noise",
+            level: 0,
+            label: "I just don't want to see their content",
+          },
+          {
+            id: "conflict",
+            level: 1,
+            label: "We had a conflict and I need distance",
+          },
+          {
+            id: "ignored",
+            level: 2,
+            label: "They keep contacting me after I asked them to stop",
+          },
+          { id: "abuse", level: 3, label: "They insult, demean or harass me" },
+          {
+            id: "danger",
+            level: 4,
+            label: "I feel unsafe (threats, stalking, doxxing)",
+          },
+        ];
+        var RELATIONS = [
+          { id: "stranger", label: "A stranger", w: 0 },
+          { id: "known", label: "Someone I know", w: 0 },
+          {
+            id: "close",
+            label: "Someone close, or formerly close (friend, family, partner)",
+            w: 1,
+          },
+        ];
+        var FREQS = [
+          { id: "once", label: "Once", w: 0 },
+          { id: "few", label: "A few times", w: 1 },
+          { id: "repeat", label: "Repeatedly, over time", w: 2 },
+        ];
+        var TOLD = [
+          { id: "yes", label: "Yes, and it continued", w: 1 },
+          { id: "no", label: "No", w: 0 },
+          {
+            id: "unsafe",
+            label: "No, it doesn't feel safe to tell them",
+            w: 1,
+          },
+        ];
+        var LEVEL_COLORS = [
+          "var(--u0)",
+          "var(--u1)",
+          "var(--u2)",
+          "var(--u3)",
+          "var(--u4)",
+        ];
+
+        // ---------- State ----------
+        var mode = "proposed";
+        var state;
+        function resetState() {
+          state = {
+            screen: "reason",
+            reason: null,
+            relation: null,
+            freq: null,
+            told: null,
+            action: null,
+            reportSent: false,
+            tier: null,
+          };
+        }
+        resetState();
+
+        // ---------- Elements ----------
+        var sheet = document.getElementById("sheet");
+        var scrim = document.getElementById("scrim");
+        var body = document.getElementById("sheetBody");
+        var rail = document.getElementById("rail");
+
+        // ---------- Helpers ----------
+        function find(list, id) {
+          for (var i = 0; i < list.length; i++) {
+            if (list[i].id === id) return list[i];
+          }
+          return null;
+        }
+        function esc(s) {
+          return String(s).replace(/[&<>"']/g, function (c) {
+            return {
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            }[c];
+          });
+        }
+
+        function computeTier() {
+          var r = find(REASONS, state.reason);
+          if (r.level === 4) return "urgent";
+          var score =
+            r.level * 2 +
+            find(RELATIONS, state.relation).w +
+            find(FREQS, state.freq).w;
+          if (state.told) score += find(TOLD, state.told).w;
+          if (score <= 2) return "soft";
+          if (score <= 5) return "block";
+          return "report";
+        }
+        function stepInfo() {
+          var r = state.reason ? find(REASONS, state.reason) : null;
+          var total = r && r.level >= 2 ? 4 : 3;
+          var n =
+            { reason: 1, relation: 2, freq: 3, told: 4 }[state.screen] || total;
+          return n + " of " + total;
+        }
+        function setRail(level) {
+          rail.style.setProperty(
+            "--rail",
+            level == null ? "var(--line)" : LEVEL_COLORS[level],
+          );
+        }
+
+        function opts(list, name) {
+          return (
+            '<div class="opts">' +
+            list
+              .map(function (o) {
+                var dot =
+                  o.level != null
+                    ? '<span class="dot" style="background:' +
+                      LEVEL_COLORS[o.level] +
+                      '"></span>'
+                    : "";
+                return (
+                  '<button class="opt' +
+                  (dot ? "" : " plain") +
+                  '" type="button" data-action="pick" data-name="' +
+                  name +
+                  '" data-id="' +
+                  o.id +
+                  '">' +
+                  dot +
+                  "<span>" +
+                  esc(o.label) +
+                  "</span></button>"
+                );
+              })
+              .join("") +
+            "</div>"
+          );
+        }
+        function top(showStep) {
+          return (
+            '<div class="sheet-top"><span>' +
+            (showStep ? "Question " + stepInfo() : "Block @alex_river") +
+            '</span><button class="close" type="button" data-action="close" aria-label="Close">×</button></div>'
+          );
+        }
+
+        // ---------- Screens (proposed flow) ----------
+        var SCREENS = {
+          reason: function () {
+            return (
+              top(true) +
+              '<h3 id="sheetTitle">What’s going on?</h3>' +
+              "<p>Blocking is permanent-feeling for the other person. A few quick questions help us suggest the right protection.</p>" +
+              opts(REASONS, "reason")
+            );
+          },
+          relation: function () {
+            return (
+              top(true) +
+              '<h3 id="sheetTitle">Who is this person to you?</h3><p>Only you and the platform’s safety team will see this.</p>' +
+              opts(RELATIONS, "relation")
+            );
+          },
+          freq: function () {
+            return (
+              top(true) +
+              '<h3 id="sheetTitle">How often has this happened?</h3>' +
+              opts(FREQS, "freq")
+            );
+          },
+          told: function () {
+            return (
+              top(true) +
+              '<h3 id="sheetTitle">Have you asked them to stop?</h3>' +
+              opts(TOLD, "told")
+            );
+          },
+          result: function () {
+            var t = state.tier;
+            var copy = {
+              soft: {
+                title: "A lighter step may be enough",
+                text: "Based on your answers, you could keep some distance without cutting contact entirely. Blocking is still available.",
+                buttons: [
+                  ["mute", "Mute for 30 days", "primary"],
+                  ["restrict", "Restrict their interactions", ""],
+                  ["block", "Block anyway", ""],
+                ],
+              },
+              block: {
+                title: "Blocking makes sense here",
+                text: "You can add a report if you want the platform to look at this.",
+                buttons: [
+                  ["block", "Block", "primary"],
+                  ["block_report", "Block and report", ""],
+                ],
+              },
+              report: {
+                title: "Block and report recommended",
+                text: "What you've described may break the platform's rules. A report is pre-filled from your answers, so you won't have to retell it.",
+                buttons: [
+                  ["block_report", "Block and report", "primary"],
+                  ["block", "Block only", ""],
+                ],
+              },
+            }[t];
+            var btns = copy.buttons;
+            return (
+              top(false) +
+              '<h3 id="sheetTitle">' +
+              copy.title +
+              "</h3><p>" +
+              copy.text +
+              "</p>" +
+              '<div class="stack">' +
+              btns
+                .map(function (b) {
+                  return (
+                    '<button class="btn ' +
+                    b[2] +
+                    '" type="button" data-action="finish" data-id="' +
+                    b[0] +
+                    '">' +
+                    b[1] +
+                    "</button>"
+                  );
+                })
+                .join("") +
+              "</div>"
+            );
+          },
+          done: function () {
+            return doneScreen();
+          },
+        };
+
+        function signalBox(reported) {
+          var r = state.reason ? find(REASONS, state.reason) : null;
+          var rows = [
+            [
+              "Urgency",
+              r
+                ? ["Low", "Low-moderate", "Moderate", "High", "Critical"][
+                    r.level
+                  ]
+                : "Not provided",
+            ],
+            [
+              "Relationship",
+              state.relation
+                ? find(RELATIONS, state.relation).label.split(" (")[0]
+                : "Not provided",
+            ],
+            [
+              "Frequency",
+              state.freq ? find(FREQS, state.freq).label : "Not provided",
+            ],
+            ["Report", reported ? "Sent to Trust & Safety" : "Not sent"],
+          ];
+          return (
+            '<div class="signal"><b>What the platform learns</b> (instead of nothing)<dl>' +
+            rows
+              .map(function (x) {
+                return "<dt>" + x[0] + "</dt><dd>" + esc(x[1]) + "</dd>";
+              })
+              .join("") +
+            "</dl></div>"
+          );
+        }
+
+        function doneScreen() {
+          var a = state.action;
+          var reported = state.reportSent || a === "block_report";
+          var html = top(false);
+          var title, text;
+          if (a === "mute") {
+            title = "Muted for 30 days";
+            text =
+              "You won't see their posts. Nothing changes for them, and you can block later.";
+          } else if (a === "restrict") {
+            title = "Restricted";
+            text =
+              "Their comments and messages are filtered away from you. You can block later.";
+          } else if (a === "urgent") {
+            title = "Blocked. You're protected now.";
+            text =
+              "No questions needed. We've preserved their profile and your messages as evidence, even if they delete them.";
+          } else {
+            title = reported ? "Blocked and reported" : "Blocked";
+            text = reported
+              ? "The safety team received your answers with the report."
+              : "You can report this later from your settings.";
+          }
+          html += '<h3 id="sheetTitle">' + title + "</h3><p>" + text + "</p>";
+          if (a === "mute" || a === "restrict") {
+            html += signalBox(false).replace(
+              "What the platform learns",
+              "What the platform learns",
+            );
+          } else {
+            html += signalBox(reported);
+          }
+          html += '<div class="stack">';
+          if (a === "urgent" && !state.reportSent) {
+            html +=
+              '<button class="btn primary" type="button" data-action="send-report">Send priority report (pre-filled)</button>';
+            html +=
+              '<p class="note" style="margin:0">Support resources for safety concerns would be shown here, matched to your country.</p>';
+          }
+          html +=
+            '<button class="btn" type="button" data-action="close">Close</button></div>';
+          return html;
+        }
+
+        // ---------- Screens (today's flow) ----------
+        function todayScreen() {
+          if (state.screen === "today-done") {
+            return (
+              top(false) +
+              '<h3 id="sheetTitle">Blocked.</h3><p>They get no explanation. The platform learned nothing: not why, not how urgent, not whether someone needs help.</p>' +
+              '<div class="stack"><button class="btn" type="button" data-action="close">Close</button></div>'
+            );
+          }
+          return (
+            top(false) +
+            '<h3 id="sheetTitle">Block @alex_river?</h3><p>They won’t be able to find your profile, posts or stories.</p>' +
+            '<div class="stack"><button class="btn danger" type="button" data-action="today-block">Block</button>' +
+            '<button class="btn" type="button" data-action="close">Cancel</button></div>'
+          );
+        }
+
+        // ---------- Render ----------
+        function render() {
+          var html = mode === "today" ? todayScreen() : SCREENS[state.screen]();
+          body.innerHTML = html;
+          var h = document.getElementById("sheetTitle");
+          if (h) {
+            h.setAttribute("tabindex", "-1");
+            h.focus({ preventScroll: true });
+          }
+          var r = state.reason ? find(REASONS, state.reason) : null;
+          var lvl = r ? r.level : null;
+          if (state.screen === "result" || state.screen === "done") {
+            if (state.action === "urgent") lvl = 4;
+            else if (state.tier === "soft") lvl = 0;
+            else if (state.tier === "block") lvl = 2;
+            else if (state.tier === "report") lvl = 3;
+          }
+          setRail(mode === "today" ? null : lvl);
+          sheet.scrollTop = 0;
+        }
+        function open() {
+          resetState();
+          state.screen = mode === "today" ? "today" : "reason";
+          render();
+          sheet.classList.add("on");
+          scrim.classList.add("on");
+        }
+        function close() {
+          sheet.classList.remove("on");
+          scrim.classList.remove("on");
+          document.getElementById("blockBtn").focus();
+        }
+
+        // ---------- Events ----------
+        document.getElementById("blockBtn").addEventListener("click", open);
+        scrim.addEventListener("click", close);
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && sheet.classList.contains("on")) close();
+        });
+
+        document.querySelectorAll(".mode button").forEach(function (b) {
+          b.addEventListener("click", function () {
+            mode = b.getAttribute("data-mode");
+            document.querySelectorAll(".mode button").forEach(function (x) {
+              x.setAttribute("aria-pressed", String(x === b));
+            });
+            close();
+          });
+        });
+
+        body.addEventListener("click", function (e) {
+          var el = e.target.closest("[data-action]");
+          if (!el) return;
+          var action = el.getAttribute("data-action");
+
+          if (action === "close") {
+            close();
+            return;
+          }
+          if (action === "today-block") {
+            state.screen = "today-done";
+            render();
+            return;
+          }
+          if (action === "send-report") {
+            state.reportSent = true;
+            render();
+            return;
+          }
+
+          if (action === "pick") {
+            var name = el.getAttribute("data-name");
+            var id = el.getAttribute("data-id");
+            state[name] = id;
+            if (name === "reason") {
+              var r = find(REASONS, id);
+              setRail(r.level);
+              if (r.level === 4) {
+                state.action = "urgent";
+                state.screen = "done";
+              } else state.screen = "relation";
+            } else if (name === "relation") state.screen = "freq";
+            else if (name === "freq") {
+              var lv = find(REASONS, state.reason).level;
+              if (lv >= 2) state.screen = "told";
+              else {
+                state.tier = computeTier();
+                state.screen = "result";
+              }
+            } else if (name === "told") {
+              state.tier = computeTier();
+              state.screen = "result";
+            }
+            render();
+            return;
+          }
+
+          if (action === "finish") {
+            state.action = el.getAttribute("data-id");
+            state.screen = "done";
+            render();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
